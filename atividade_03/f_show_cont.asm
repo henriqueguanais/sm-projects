@@ -1,11 +1,11 @@
 f_show_cont:
 	clr r20
     cpi cont_pov, 3
-    breq mostrar_unidade
+    breq mostrar_centena
     cpi cont_pov, 2
     breq mostrar_dezena
     cpi cont_pov, 1
-    breq mostrar_centena
+    breq mostrar_unidade
 
 mostrar_unidade:
 	mov r20,valor_unidade

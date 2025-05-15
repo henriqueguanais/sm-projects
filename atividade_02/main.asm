@@ -506,9 +506,12 @@ converte_valor_adc:
 	cpi estado,0x04
 	rjmp escala_passo 					; valores de 0 a 15
 
-    ldi  r22, low(1024)
-    ldi  r23, high(1024)    			; limiar
-	rjmp loop_divisao_simples
+    ldi  r22, low(999)
+    ldi  r23, high(999)    			; limite
+	
+	cp r6, r22						; compara o valor lido com o limite L
+	breq limite_adc
+	rjmp fim_adc
 
 escala_passo:
 	swap r7								; 0000 00XX -> 00XX 0000 
@@ -527,22 +530,15 @@ escala_passo:
 	mov r21, r7
 	ret
 
-loop_divisao_simples:
-    cp      r6, r22
-    cpc     r7, r23
-    brlo    final_divisao
+limite_adc:
+	cp r7, 23						; compara o valor lido com o limite H
+	breq fim_adc
 
-    sub     r6, r22
-    sbc     r7, r23
+	mov r20, r6						; se o valor lido for menor que o limite, retorna o valor lido
+	mov r21, r7
+	ret
 
-    inc     r20				
-    cpi     r20, 0
-    brne    loop_divisao_simples
-    inc     r21
-    rjmp    loop_divisao_simples
-
-final_divisao:
-    ret
-    
-
-    
+fim_adc:
+	mov r20, r22					; se o valor lido for maior que o limite, retorna o limite					
+	mov r21, r23
+	ret

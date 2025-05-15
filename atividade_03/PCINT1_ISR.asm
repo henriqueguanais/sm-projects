@@ -1,7 +1,9 @@
 PCINT1_ISR:
 	clr r24
+
 	in r24, PINC
 	andi r24,0x0e
+
 	cpi r24,0x06						
 	breq case_exibe_memoria			    ; S3 pressionado
 	cpi r24,0x0a
@@ -14,7 +16,7 @@ case_exibe_memoria:
 	ldi estado, 0x03
     reti
 
-case_salva_memoria	:
+case_salva_memoria:
 	ldi estado, 0x02
     reti
 

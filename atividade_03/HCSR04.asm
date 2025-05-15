@@ -1,44 +1,33 @@
 HCSR04:
-	call delay_10us
-	ldi r16, 0x10
-	out PORTC, r16
-	call delay_10us
-	call delay_10us
+	call delay_10us	
+	ldi r16, 0x10			
+	out PORTC, r16					; ativa o trigger do sensor
+	call delay_10us					
+	call delay_10us					; segura por 20us ao todo
+
 	clr r16
-	out PORTC, r16
+	out PORTC, r16					; desativa o trigger do sensor
 
 	call delay_10us
 	call delay_10us
-
 
 ler_echo:
-
-rjmp calc_distancia
 	clr r24
-	in r24, PINC
+
+	in r24, PINC					; le o pino do echo
 	andi r24,0x20
-	cpi r24, 0x20
+	cpi r24, 0x20					; verifica se o pino do echo esta alto
 	breq calc_distancia
-	;mov ZL, r24
-	;call f_valor     	; calcula a quantidade de centena, dezena e unidade a ser exibida
-    ;call f_show_cont 	; exibe contador
-    ;call f_pov       	; faz o efeito pov
-	;call f_delay     	; delay para o contador
 
 	rjmp ler_echo
 
 calc_distancia:
 	in r24, PINC
 	andi r24,0x20
-	cpi r24, 0x00
-	;breq fim_calc
-	;cpi r16, 50
-	;brsh inc_cm
+	cpi r24, 0x00					; verifica se o pino do echo esta baixo
+	breq fim_calc
 	adiw Z, 1
-	inc r16
-	rjmp calc_distancia
 
-inc_cm:
 	rjmp calc_distancia
 
 fim_calc:
