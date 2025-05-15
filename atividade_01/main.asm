@@ -11,7 +11,7 @@
 .org 0x0000
     rjmp main
 
-lista : .db 54,54,54,54,54,54,54,54,54,54       ; lista de 10 elementos
+lista : .db 10,54,22,244,0,255,15,54,77,111       ; lista de 10 elementos
 
 main:
     ; inicializacao dos pinos
