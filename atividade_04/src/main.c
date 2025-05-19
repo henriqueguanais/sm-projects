@@ -11,11 +11,12 @@
 #define ESTADO3 3
 
 volatile uint8_t estado_mde = ESTADO0;
-volatile uint8_t valor_atual = 0;
+volatile int8_t passo = 1;                         // passo de incremento, decremento
+volatile int8_t inc_dec = 0;                        // -1 = decremento, 1 = incremento, 0 = nada
+volatile uint16_t cont = 0;
 
 void setup();
-void mde(uint8_t red_color, uint8_t green_color, uint8_t blue_color);
-
+void mde(uint8_t *red_color, uint8_t *green_color, uint8_t *blue_color);
 
 int main()
 {
@@ -25,24 +26,58 @@ int main()
     uint8_t green_color = 0;
     uint8_t blue_color = 0;
 
+    char red_color_str[4] = {};
+    char green_color_str[4] = {};
+    char blue_color_str[4] = {};
+
     inic_LCD_4bits(); //inicializa o LCD
     escreve_LCD(" RED GREEN BLUE"); //string armazenada na RAM
     cmd_LCD(0xC0,0); //desloca cursor para a segunda linha
-    
-    escreve_LCD("   0    0    0"); //string armazenada na RAM
 
     while(1) {
         cmd_LCD(0x02, 0);       // retorna cursor para o início da linha
 
-        cmd_LCD(0xC3, 0);       // unidade red
-        escreve_LCD((char *)&red_color);
-        cmd_LCD(0xC8, 0);       // unidade green
-        escreve_LCD((char *)&green_color);
-        cmd_LCD(0xCD, 0);       // unidade blue
-        escreve_LCD((char *)&blue_color);
+        ident_num(red_color, red_color_str);
+        cmd_LCD(0xC1, 0);
+        escreve_LCD(red_color_str);
+        if (red_color < 100) {
+            cmd_LCD(0xC1, 0);
+            escreve_LCD(" ");       // limpa o caractere da centena
 
-        mde(red_color, green_color, blue_color);
+            if (red_color < 10) {
+                cmd_LCD(0xC2, 0);      // posicao da dezena
+                escreve_LCD(" ");       // limpa o caractere da dezena
+            }
+        }
+   
+        ident_num(green_color, green_color_str);
+        cmd_LCD(0xC6, 0);
+        escreve_LCD(green_color_str);
+        if (green_color < 100 ) {
+            cmd_LCD(0xC6, 0);
+            escreve_LCD(" ");       // limpa o caractere da centena
+            if (green_color < 10) {
+                cmd_LCD(0xC7, 0);      // posicao da dezena
+                escreve_LCD(" ");       // limpa o caractere da dezena
+            }
+        }
+     
+        ident_num(blue_color, blue_color_str);
+        cmd_LCD(0xCB, 0);
+        escreve_LCD(blue_color_str);
+        if (blue_color < 100) {
+            cmd_LCD(0xCB, 0);
+            escreve_LCD(" ");       // limpa o caractere da centena
+            if (blue_color < 10) {
+                cmd_LCD(0xCC, 0);      // posicao da dezena
+                escreve_LCD(" ");       // limpa o caractere da dezena
+            }
+
+        }
+
+        mde(&red_color, &green_color, &blue_color);
     }
+    
 }
 
 void setup()
@@ -53,56 +88,79 @@ void setup()
 	
 	PCICR = 0x02;//interrupcao btn
 	PCMSK1 = 0x0E;
+
+    TCCR0A = 0x00;     // timer de 16 ms                  
+	TCCR0B = 0xC5;       // prescaler de 1024               
+	TCNT0  = 0;                         
+	TIMSK0 = (1<<TOIE0); 
 	sei();
-	
+
+    TCCR2A = 0x83;   // fast pwm para OCR2A       
+    //TCCR2A = 0xD3;   // fast pwm para OCR2A  
+	TCCR2B = 0x01;        
+	TCNT2  = 0; 
+    OCR2A = 0;       // inicia contagem em 0
+
+    TCCR1A = 0xA1;   // fast pwm para OCR1A e OCR1B
+    TCCR1B = 0x09;   // fast pwm, no prescaling
+    TCNT1 = 0;       // inicia contagem em 0
+    OCR1A = 0;       // inicia contagem em 0
+    OCR1B = 0;       // inicia contagem em 0
+
 }
 
-void mde(uint8_t red_color, uint8_t green_color, uint8_t blue_color)
+void mde(uint8_t *red_color, uint8_t *green_color, uint8_t *blue_color)
 {
-	switch(estado_mde){
+	switch(estado_mde) {
+
 		case ESTADO0:
-        cmd_LCD(0xCE, 0);
-        escreve_LCD(" ");
+            cmd_LCD(0xCE, 0);
+            escreve_LCD(" ");               // limpa o caractere do estado anterior
 			break;
+
 		case ESTADO1:
-        valor_atual = red_color;
-        cmd_LCD(0xC4, 0);       
-        escreve_LCD("*");
+
+            *red_color += passo*inc_dec;
+            OCR2A = *red_color;           // PWM para o LED vermelho
+            cmd_LCD(0xC4, 0);       
+            escreve_LCD("*");
+
 			break;
+
 		case ESTADO2:
-        valor_atual = green_color;
-        cmd_LCD(0xC4, 0);       
-        escreve_LCD(" ");
-        cmd_LCD(0xC9, 0);
-        escreve_LCD("*");
+            *green_color += passo*inc_dec;
+            OCR1B = *green_color;        // PWM para o LED verde
+            cmd_LCD(0xC4, 0);       
+            escreve_LCD(" ");          // limpa o caractere do estado anterior
+            cmd_LCD(0xC9, 0);
+            escreve_LCD("*");
 			break;
+
 		case ESTADO3:
-        valor_atual = blue_color;
-        cmd_LCD(0xCE, 0);
-        escreve_LCD("*");
-        cmd_LCD(0xC9, 0);
-        escreve_LCD(" ");
+            *blue_color += passo*inc_dec;
+            OCR1A = *blue_color;        // PWM para o LED azul
+            cmd_LCD(0xCE, 0);
+            escreve_LCD("*");
+            cmd_LCD(0xC9, 0);
+            escreve_LCD(" ");           // limpa o caractere do estado anterior
 			break;
+
 		default:
 			break;
 	}
-}
-
-void pwm_led() {
-
+    _delay_ms(100);
 }
 
 ISR(PCINT1_vect)
 {
-    
-	if (PINC==0x06){ 
-		//	S3 pressionado (+)
-        valor_atual += 1;
-        if(valor_atual > 255){
-            valor_atual = 255;
-        }
-        
+    if (inc_dec == 0) {
+        cont = 0;
+        passo = 1;
+    }
 
+	if (PINC==0x06) { 
+		//	S3 pressionado (+)
+        inc_dec = 1;
 	}
 	else if(PINC==0x0A){
 		// S2 pressionado (M)
@@ -113,10 +171,20 @@ ISR(PCINT1_vect)
 	}
 	else if(PINC==0x0C){
 		// S1 pressionado (-)
-        valor_atual -= 1;
-        if(valor_atual < 0){
-            valor_atual = 0;
-        }
+        inc_dec = -1;
 	}
-	
+    else {
+        inc_dec = 0; // limpa o incremento/decremento
+    }
+    
+}
+
+ISR(TIMER0_OVF_vect)
+{
+    cont ++;
+    if (cont >= 314) {
+        // 5 segundos
+        cont = 0;
+        passo = 5;
+    }
 }

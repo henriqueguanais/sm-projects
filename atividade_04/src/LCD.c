@@ -72,24 +72,20 @@ void escreve_LCD(char *c)
     for (; *c!=0;c++) cmd_LCD(*c,1);    
 }
 //------------------------------------------------------------------------------------
-//Sub-rotina de escrita no LCD - dados armazenados na FLASH
-//------------------------------------------------------------------------------------
-void escreve_LCD_Flash(const char *c)
-{
-    for (;pgm_read_byte(&(*c))!=0;c++) cmd_LCD(pgm_read_byte(&(*c)),1);
-} 
-//------------------------------------------------------------------------------------
 //Conversão de um número em seus digitos individuais – função auxiliar
 //-----------------------------------------------------------------------------------
-void ident_num(unsigned int valor, unsigned char *disp)
+void ident_num(unsigned int valor, char *disp)
 {
-    unsigned char n;
-    for(n=0; n<tam_vetor; n++)
-    disp[n] = 0 + conv_ascii; //limpa vetor para armazenagem dos digitos
+    uint8_t n;
+    for(n=0; n<tam_vetor; n++) {
+        disp[n] = '0'; //limpa vetor para armazenagem dos digitos
+    }
+    disp[tam_vetor-1] = '\0';     //coloca o terminador de string
+    n = 2;
     do
     {
-    *disp = (valor%10) + conv_ascii; //pega o resto da divisão por 10
-    valor /=10; //pega o inteiro da divisão por 10
-    disp++;
-    }while (valor!=0);
+        disp[n--] = (valor%10) + conv_ascii; //pega o resto da divisão por 10
+        valor /=10; //pega o inteiro da divisão por 10
+    } while (valor!=0);
+
 } 
