@@ -14,7 +14,7 @@
 
 volatile uint8_t estado_mde = ESTADO0;
 volatile int8_t passo = 1;                         // passo de incremento, decremento
-volatile int8_t inc_dec = 0;                        // -1 = decremento, 1 = incremento, 0 = nada
+volatile int8_t muda_estado = 0;                        // 0 = não muda, 1 = muda
 volatile uint16_t cont = 0;
 
 void setup();
@@ -34,12 +34,14 @@ int main()
     escreve_LCD("X:"); //string armazenada na RAM
     cmd_LCD(0xC0,0); //desloca cursor para a segunda linha
     escreve_LCD("Y:"); //string armazenada na RAM
-    cmd_LCD(0x83, 0);   // linha x
+
+    cmd_LCD(0x83, 0);   // linha x, comeco do vetor
     for (int i=0; i<8; i++) {
         ident_num(pos_x[i], pos_x_str);
         escreve_LCD(pos_x_str);
     }
     //escreve_LCD("0 0 0 0 0 0 0");
+
     cmd_LCD(0xC3, 0);   // linha y
     for (int i=0; i<8; i++) {
         ident_num(pos_y[i], pos_y_str);
@@ -47,17 +49,22 @@ int main()
     }
     //escreve_LCD("0 0 0 0 0 0 0");
 
+    uint16_t vy_joystick = 0;
+    uint16_t vx_joystick = 0;
+    uint8_t direction_vector[4] = {0};
+
     while(1) {
         cmd_LCD(0x02, 0);       // retorna cursor para o início da linha
 
-        mde();
+        ler_joystick(&vy_joystick, &vx_joystick);
+        joystick_direction(vy_joystick, vx_joystick, direction_vector);
+
+        mde(direction_vector);
     }
-    
 }
 
 void setup()
 {
-	DDRC &= ~0x30;// setando PC4 e PC5 como entrada, joystick
 	DDRD |= 0xFC;// setando PD2, PD3 PD4 a PD7 como saida, LCD
     DDRB |= 0x2D;     // setando PB2, PB3, PB5, MAX7219 como saida
 	
@@ -66,13 +73,14 @@ void setup()
 	TCNT0  = 0;                         
 	TIMSK0 = (1<<TOIE0); 
 	sei();
-
-
 }
 
-
-void mde()
+void mde(direction_vector)
 {
+    if (muda_estado) {
+        muda_estado = 0;
+        estado_mde = ESTADO1;
+    }
 	switch(estado_mde) {
 
 		case ESTADO0:
@@ -80,19 +88,23 @@ void mde()
 			break;
 
 		case ESTADO1:
-
+            // UP
+            estado_mde = ESTADO0;
 			break;
 
 		case ESTADO2:
-
+            // DOWN
+            estado_mde = ESTADO0;
 			break;
 
 		case ESTADO3:
-
+            // LEFT
+            estado_mde = ESTADO0;
 			break;
 
         case ESTADO4:
-
+            // RIGHT
+            estado_mde = ESTADO0;
             break;
 		default:
 			break;
@@ -104,9 +116,9 @@ void mde()
 ISR(TIMER0_OVF_vect)
 {
     cont ++;
-    if (cont >= 314) {
-        // 5 segundos
+    if (cont >= 32) {
+        // 0,5 s
         cont = 0;
-        passo = 5;
+        muda_estado = 1;
     }
 }
