@@ -78,10 +78,10 @@ void ident_num(unsigned int valor, char *disp)
 {
     uint8_t n;
     for(n=0; n<tam_vetor; n++) {
-        disp[n] = '0'; //limpa vetor para armazenagem dos digitos
+        disp[n] = ' '; //limpa vetor para armazenagem dos digitos
     }
     disp[tam_vetor-1] = '\0';     //coloca o terminador de string
-    n = 2;
+    n = tam_vetor-2;
     do
     {
         disp[n--] = (valor%10) + conv_ascii; //pega o resto da divisão por 10
