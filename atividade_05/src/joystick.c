@@ -39,18 +39,26 @@ void joystick_direction(uint16_t valor_y, uint16_t valor_x, uint8_t *direction_v
     if (valor_y >= LIM_SUP_DZ) {
         direction_vector[0] = 1;    // up
         direction_vector[1] = 0;
+        direction_vector[2] = 0;
+        direction_vector[3] = 0;
     }
     if (valor_y <= LIM_INF_DZ) {
         direction_vector[0] = 0;
         direction_vector[1] = 1;    // down
+        direction_vector[2] = 0;
+        direction_vector[3] = 0;
     }
 
     if (valor_x >= LIM_SUP_DZ) {
         direction_vector[2] = 0;    
         direction_vector[3] = 1;    // right
+        direction_vector[0] = 0;
+        direction_vector[1] = 0;
     }
     if (valor_x <= LIM_INF_DZ) {
         direction_vector[2] = 1;     // left
-        direction_vector[3] = 0;    
+        direction_vector[3] = 0;   
+        direction_vector[0] = 0;
+        direction_vector[1] = 0; 
     }
 }

@@ -3,6 +3,8 @@
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 
+#include <stdio.h>
+
 #include "LCD.h"
 #include "joystick.h"
 #include "MAX7219.h"
@@ -16,19 +18,22 @@
 volatile uint8_t estado_mde = ESTADO0;
 volatile int8_t passo = 1;       // passo de incremento, decremento
 volatile int8_t muda_estado = 0; // 0 = não muda, 1 = muda
+volatile int8_t cresce = 0;         // 0 = não cresce, 1 = cresce
 volatile uint16_t cont = 0;
+volatile uint8_t tamanho_cobra = 1; // Tamanho inicial da cobra
 
 void setup();
 void mde(uint8_t *pos_x, uint8_t *pos_y, uint8_t *direction_vector);
-void matriz_led();
+void aumenta_cobra(uint8_t *pos_x, uint8_t *pos_y);
 
 int main()
 {
     setup();
     setup_joystick();
+    max7219_init();
 
-    uint8_t pos_x[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-    uint8_t pos_y[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    uint8_t pos_x[8] = {3, 0, 0, 0, 0, 0, 0, 0};
+    uint8_t pos_y[8] = {4, 0, 0, 0, 0, 0, 0, 0};
 
     char pos_x_str[2];
     char pos_y_str[2];
@@ -56,11 +61,13 @@ int main()
     uint16_t vy_joystick = 0;
     uint16_t vx_joystick = 0;
     uint8_t direction_vector[4] = {0};
+    max7219_clear_matrix(); // Limpa a matriz LED
 
     while (1)
     {
         cmd_LCD(0x02, 0);       // retorna cursor para o início da linha
-
+        
+        set_matriz_leds(pos_x, pos_y);
         // Atualiza as posições do vetor
         cmd_LCD(0x83, 0);   // linha x, comeco do vetor
         for (int i=0; i<7; i++) {
@@ -77,9 +84,10 @@ int main()
 
         ler_joystick(&vy_joystick, &vx_joystick);
 
-        joystick_direction(vy_joystick, vx_joystick, direction_vector);
 
+        joystick_direction(vy_joystick, vx_joystick, direction_vector);
         mde(pos_x, pos_y, direction_vector);
+
     }
 }
 
@@ -130,6 +138,14 @@ void mde(uint8_t *pos_x, uint8_t *pos_y, uint8_t *direction_vector)
         {
         case ESTADO0:
             // posiçao inicial
+            // Animação de reset
+            animacao_game_over();
+            max7219_clear_matrix(); // Limpa a matriz LED
+            direction_vector[0] = 0;
+            direction_vector[1] = 0;    
+            direction_vector[2] = 0;
+            direction_vector[3] = 1;
+            tamanho_cobra = 1; // Reseta o tamanho da cobra
             for (int i = 0; i < 8; i++)
             {
                 pos_x[i] = 0;
@@ -142,41 +158,25 @@ void mde(uint8_t *pos_x, uint8_t *pos_y, uint8_t *direction_vector)
 
         case ESTADO1:
             // UP
-            for (int i = 7; i > 0; i--)
-            {
-                pos_x[i] = pos_x[i - 1];
-                pos_y[i] = pos_y[i - 1];
-            }
+            aumenta_cobra(pos_x, pos_y); // Aumenta a cobra antes de mudar a posição
             pos_y[0] += 1;
             break;
 
         case ESTADO2:
             // DOWN
-            for (int i = 7; i > 0; i--)
-            {
-                pos_x[i] = pos_x[i - 1];
-                pos_y[i] = pos_y[i - 1];
-            }
+            aumenta_cobra(pos_x, pos_y); // Aumenta a cobra antes de mudar a posição
             pos_y[0] -= 1;
             break;
 
         case ESTADO3:
             // LEFT
-            for (int i = 7; i > 0; i--)
-            {
-                pos_x[i] = pos_x[i - 1];
-                pos_y[i] = pos_y[i - 1];
-            }
+            aumenta_cobra(pos_x, pos_y); // Aumenta a cobra antes de mudar a posição
             pos_x[0] -= 1;
             break;
 
         case ESTADO4:
             // RIGHT
-            for (int i = 7; i > 0; i--)
-            {
-                pos_x[i] = pos_x[i - 1];
-                pos_y[i] = pos_y[i - 1];
-            }
+            aumenta_cobra(pos_x, pos_y); // Aumenta a cobra antes de mudar a posição
             pos_x[0] += 1;
             break;
         default:
@@ -187,19 +187,40 @@ void mde(uint8_t *pos_x, uint8_t *pos_y, uint8_t *direction_vector)
     _delay_ms(100);
 }
 
-void matriz_led()
+void aumenta_cobra(uint8_t *pos_x, uint8_t *pos_y)
 {
-    led_matrix[3] |= (1 << 4); // Linha 3, coluna 4 inicio da cobra
-    max7219_update_matrix();
+    // Aumenta a cobra
+    for (int i = tamanho_cobra-1; i > 0; i--)
+    {
+        pos_x[i] = pos_x[i - 1];
+        pos_y[i] = pos_y[i - 1];
+    }
 }
 
 ISR(TIMER0_OVF_vect)
 {
+    static uint8_t timer_cobra = 0;
+    
     cont++;
-    if (cont >= 64)
+    if (cont >= 32)
     {
-        // 1 s
+        // 0.5 s
         cont = 0;
+
+        if (timer_cobra >= 5) {
+            cresce = 1; // cresce a cobra a cada 2 segundos
+            timer_cobra = 0; // reseta o timer
+
+            if (tamanho_cobra < 8) {
+                tamanho_cobra++; // aumenta o tamanho da cobra
+            } else {
+                tamanho_cobra = 8; // limita o tamanho da cobra a 8
+            }
+
+        } else {
+            timer_cobra++;
+        }
+        
         muda_estado = 1;
     }
 }
