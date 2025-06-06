@@ -74,14 +74,16 @@ void escreve_LCD(char *c)
 //------------------------------------------------------------------------------------
 //Conversão de um número em seus digitos individuais – função auxiliar
 //-----------------------------------------------------------------------------------
-void ident_num(unsigned int valor, char *disp)
+void ident_num(unsigned int valor, char *disp, unsigned int qtd_digit)
 {
     uint8_t n;
-    for(n=0; n<tam_vetor; n++) {
+    qtd_digit++;
+
+    for(n=0; n<qtd_digit; n++) {
         disp[n] = ' '; //limpa vetor para armazenagem dos digitos
     }
-    disp[tam_vetor-1] = '\0';     //coloca o terminador de string
-    n = tam_vetor-2;
+    disp[qtd_digit-1] = '\0';     //coloca o terminador de string
+    n = qtd_digit-2;
     do
     {
         disp[n--] = (valor%10) + conv_ascii; //pega o resto da divisão por 10

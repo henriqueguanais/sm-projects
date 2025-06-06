@@ -12,7 +12,6 @@
 #define CONTR_LCD PORTD//PORT com os pinos de controle do LCD (pino R/W em 0).
 #define E PD3 //pino de habilitação do LCD (enable)
 #define RS PD2 //pino para informar se o dado é uma instrução ou caractere
-#define tam_vetor 2 //número de digitos individuais para a conversão por ident_num()
 #define conv_ascii 48 //48 se ident_num() deve retornar um número no formato ASCII (0 para
 
 //sinal de habilitação para o LCD
@@ -21,5 +20,5 @@
 void cmd_LCD(unsigned char c, char cd);
 void inic_LCD_4bits();
 void escreve_LCD(char *c);
-void ident_num(unsigned int valor, char *disp);
+void ident_num(unsigned int valor, char *disp, unsigned int qtd_digit);
 #endif 
