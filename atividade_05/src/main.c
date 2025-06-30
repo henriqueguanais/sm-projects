@@ -18,7 +18,7 @@
 volatile uint8_t estado_mde = ESTADO0;
 volatile int8_t passo = 1;       // passo de incremento, decremento
 volatile int8_t muda_estado = 0; // 0 = não muda, 1 = muda
-volatile int8_t cresce = 0;         // 0 = não cresce, 1 = cresce
+volatile int8_t cresce = 0;      // 0 = não cresce, 1 = cresce
 volatile uint16_t cont = 0;
 volatile uint8_t tamanho_cobra = 1; // Tamanho inicial da cobra
 
@@ -46,13 +46,15 @@ int main()
 
     // Atualiza as posições do vetor
     cmd_LCD(0x83, 0); // linha x, comeco do vetor
-    for (int i=0; i<7; i++) {
+    for (int i = 0; i < 7; i++)
+    {
         ident_num(pos_x[i], pos_x_str);
         escreve_LCD(&pos_x_str[0]);
         escreve_LCD(" ");
     }
-    cmd_LCD(0xC3, 0);   // linha y
-    for (int i=0; i<7; i++) {
+    cmd_LCD(0xC3, 0); // linha y
+    for (int i = 0; i < 7; i++)
+    {
         ident_num(pos_y[i], pos_y_str);
         escreve_LCD(&pos_y_str[0]);
         escreve_LCD(" ");
@@ -65,18 +67,20 @@ int main()
 
     while (1)
     {
-        cmd_LCD(0x02, 0);       // retorna cursor para o início da linha
-        
+        cmd_LCD(0x02, 0); // retorna cursor para o início da linha
+
         set_matriz_leds(pos_x, pos_y);
         // Atualiza as posições do vetor
-        cmd_LCD(0x83, 0);   // linha x, comeco do vetor
-        for (int i=0; i<7; i++) {
+        cmd_LCD(0x83, 0); // linha x, comeco do vetor
+        for (int i = 0; i < 7; i++)
+        {
             ident_num(pos_x[i], pos_x_str);
             escreve_LCD(&pos_x_str[0]);
             escreve_LCD(" ");
         }
-        cmd_LCD(0xC3, 0);   // linha y
-        for (int i=0; i<7; i++) {
+        cmd_LCD(0xC3, 0); // linha y
+        for (int i = 0; i < 7; i++)
+        {
             ident_num(pos_y[i], pos_y_str);
             escreve_LCD(&pos_y_str[0]);
             escreve_LCD(" ");
@@ -84,10 +88,8 @@ int main()
 
         ler_joystick(&vy_joystick, &vx_joystick);
 
-
         joystick_direction(vy_joystick, vx_joystick, direction_vector);
         mde(pos_x, pos_y, direction_vector);
-
     }
 }
 
@@ -142,7 +144,7 @@ void mde(uint8_t *pos_x, uint8_t *pos_y, uint8_t *direction_vector)
             animacao_game_over();
             max7219_clear_matrix(); // Limpa a matriz LED
             direction_vector[0] = 0;
-            direction_vector[1] = 0;    
+            direction_vector[1] = 0;
             direction_vector[2] = 0;
             direction_vector[3] = 1;
             tamanho_cobra = 1; // Reseta o tamanho da cobra
@@ -190,7 +192,7 @@ void mde(uint8_t *pos_x, uint8_t *pos_y, uint8_t *direction_vector)
 void aumenta_cobra(uint8_t *pos_x, uint8_t *pos_y)
 {
     // Aumenta a cobra
-    for (int i = tamanho_cobra-1; i > 0; i--)
+    for (int i = tamanho_cobra - 1; i > 0; i--)
     {
         pos_x[i] = pos_x[i - 1];
         pos_y[i] = pos_y[i - 1];
@@ -200,27 +202,32 @@ void aumenta_cobra(uint8_t *pos_x, uint8_t *pos_y)
 ISR(TIMER0_OVF_vect)
 {
     static uint8_t timer_cobra = 0;
-    
+
     cont++;
     if (cont >= 32)
     {
         // 0.5 s
         cont = 0;
 
-        if (timer_cobra >= 5) {
-            cresce = 1; // cresce a cobra a cada 2 segundos
+        if (timer_cobra >= 5)
+        {
+            cresce = 1;      // cresce a cobra a cada 2 segundos
             timer_cobra = 0; // reseta o timer
 
-            if (tamanho_cobra < 8) {
+            if (tamanho_cobra < 8)
+            {
                 tamanho_cobra++; // aumenta o tamanho da cobra
-            } else {
+            }
+            else
+            {
                 tamanho_cobra = 8; // limita o tamanho da cobra a 8
             }
-
-        } else {
+        }
+        else
+        {
             timer_cobra++;
         }
-        
+
         muda_estado = 1;
     }
 }

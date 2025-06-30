@@ -11,10 +11,13 @@ void ADC_init(void)
     ADCSRB = 0x00;
 }
 
-uint16_t ler_adc()
+void ler_adc(uint16_t *adc_value)
 {
     ADCSRA |= (1 << ADSC); // inicia a conversao
     while (!(ADCSRA & (1 << ADIF))); // espera a conversao terminar
 
-    return ADC; // armazena o valor lido
+    ADCSRA |= (1 << ADIF); // limpa a flag de interrupcao
+
+    *adc_value = ADC; // armazena o valor lido
+    _delay_us(10);
 }
