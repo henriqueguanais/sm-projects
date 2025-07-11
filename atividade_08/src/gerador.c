@@ -1,7 +1,7 @@
 #include <avr/io.h>
 #include "gerador.h"
 
-static const uint8_t COS_TABLE[32] = {
+static const uint16_t COS_TABLE[32] = {
     255, 253, 246, 234, 218, 199, 177, 153,
     128, 103, 79, 57, 38, 22, 10, 3,
     0, 3, 10, 22, 38, 57, 79, 103,
@@ -9,27 +9,34 @@ static const uint8_t COS_TABLE[32] = {
 
 void envia_dados(uint16_t y)
 {
-    PORTC = (y << 4) & 0x30; // Envia os bits menos significativos para PC5 e PC6 0000 00xx
+    PORTC = (y << 4) & 0x30; // Envia os bits menos significativos para PC4 e PC5 0000 00xx
     PORTB = (y >> 2);        // Envia os bits mais significativos para PB0 a PB5  xxxx xx00
 }
 
 void quadrada(uint8_t amp, uint8_t offset) {
     static uint16_t y = 0;
+    static uint8_t flag = 0;
 
-    if (y == offset) {
-        y += amp;
+    // if (y == offset) {
+    //     y = amp + offset;
+    // }
+    // else if (y == (offset + amp)) {
+    //     y = offset;
+    // }
+
+    if (flag == 0) {
+        flag = 1;
+        y = amp + offset; // Seta o valor inicial
     }
-    else if (y == (offset + amp)) {
-        y = offset;
+    else {
+        flag = 0;
+        y = offset; // Reseta para o offset
     }
 
     if (y >= 255) {
         y = 255; // Limita o valor máximo
     }
-    else if (y <= 0) {
-        y = 0; // Limita o valor mínimo
-    }
-
+    
     envia_dados(y);
 }
 
@@ -49,6 +56,10 @@ void triangular(uint8_t amp, uint8_t offset) {
         direction = 1; // Muda a direção para subir
     }
 
+    if (y >= 255) {
+        y = 255; // Limita o valor máximo
+    }
+
     envia_dados(y);
 }
 
@@ -56,7 +67,11 @@ void senoidal(uint8_t amp, uint8_t offset, uint8_t index) {
     static uint16_t y = 0;
 
     // Calcula o valor da senoide usando a tabela de cosseno
-    y = COS_TABLE[index];
+    y = amp*COS_TABLE[index]/255 + offset;
+
+    if (y >= 255) {
+        y = 255; // Limita o valor máximo
+    }
 
     envia_dados(y);
     
@@ -72,6 +87,11 @@ void rampa(uint8_t amp, uint8_t offset) {
         y = offset; // Reseta para o offset
 
     }
+
+    if (y >= 255) {
+        y = 255; // Limita o valor máximo
+    }
+
 
     envia_dados(y);
 

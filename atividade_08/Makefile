@@ -9,31 +9,37 @@ PROGRAMMER = arduino
 
 # Diretórios
 BUILD_DIR = build
-SRC_DIR = src
 
-# Arquivos fonte
-SRC = $(wildcard $(SRC_DIR)/*.c)
-OBJ = $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SRC))
+# se nao for usar o tests, remova tests do SRC_DIRS
+SRC_DIRS = src lib/freertos/src
+
+# Arquivos fonte de múltiplos diretórios
+SRC = $(foreach dir, $(SRC_DIRS), $(wildcard $(dir)/*.c))
+OBJ = $(patsubst %.c, $(BUILD_DIR)/%.o, $(SRC))
 
 # Compilador e flags
 CC = avr-gcc
-CFLAGS = -mmcu=$(MCU) -Wall -Os -DF_CPU=$(F_CPU)
+CFLAGS = -mmcu=$(MCU) -Wall -Os -DF_CPU=$(F_CPU) -Iinclude -Ilib/freertos/include
 LDFLAGS = -mmcu=$(MCU)
 
 .PHONY: all flash clean
 
 all: $(BUILD_DIR)/firmware.hex
 
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
-	@mkdir -p $(@D)  # Cria o diretório se não existir
+# Compila cada .c em .o no diretório build/
+$(BUILD_DIR)/%.o: %.c
+	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -c $< -o $@
 
+# Linka todos os objetos em firmware.elf
 $(BUILD_DIR)/firmware.elf: $(OBJ)
 	$(CC) $(LDFLAGS) -o $@ $^
 
+# Gera o .hex a partir do .elf
 $(BUILD_DIR)/firmware.hex: $(BUILD_DIR)/firmware.elf
 	avr-objcopy -O ihex -R .eeprom $< $@
 
+# Grava no Arduino
 flash: $(BUILD_DIR)/firmware.hex
 	avrdude -p $(MCU) -c $(PROGRAMMER) -P $(PORT) -b $(BAUD) -U flash:w:$<:i
 

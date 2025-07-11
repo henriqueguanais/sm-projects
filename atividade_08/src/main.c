@@ -15,9 +15,9 @@
 volatile int8_t inc_dec = 0; // -1 = decremento, 1 = incremento, 0 = nada
 volatile uint8_t estado_mde = ESTADO0;
 volatile uint8_t muda_parametro = 0; // flag para mudar o parametro
-volatile uint8_t amp = 0;
+volatile uint8_t amp = 127;
 volatile uint8_t offset = 0; // offset do sinal
-volatile uint8_t freq = 1;	 // frequencia do sinal
+volatile uint8_t freq = 100;	 // frequencia do sinal
 volatile uint8_t cont = 0; // contador para o sinal senoide
 
 void setup();
@@ -43,7 +43,7 @@ void setup()
 	DDRD = 0x00;
 	DDRD |= 0xFC; // setando PD2, PD3 PD4 a PD7 como saida, LCD
 
-	DDRC |= 0x30; // setando PC5 a PC6 como saida, coef (DA0, DA1)
+	DDRC |= 0x30; // setando PC4 a PC5 como saida, coef (DA0, DA1)
 	DDRB = 0x3F;  // setando PB0 a PB5 como saida, coef (DA2 - DA7)
 
 	PCICR = 0x0A; // interrupcao btn
@@ -67,10 +67,10 @@ static void vtask_mde(void *pvParameters)
 			OCR1A = (F_CPU/(2*freq)-1)/255;
 			break;
 		case ESTADO1:
-			OCR1A = (F_CPU/(2*freq)-1)/65000;
+			OCR1A = (F_CPU/(2*freq)-1)/60000;
 			break;
 		case ESTADO2:
-			OCR1A = (F_CPU/(freq)-1)/65000;
+			OCR1A = (F_CPU/(freq)-1)/60000;
 			break;
 		case ESTADO3:
 			OCR1A = (F_CPU/(freq)-1)/8000;
@@ -79,11 +79,34 @@ static void vtask_mde(void *pvParameters)
 			break;
 		}
 
-		freq += inc_dec; // incrementa ou decrementa a frequencia
-		if (freq < 1)
-			freq = 1; // limita a frequencia minima
-		if (freq > 100)
-			freq = 100; // limita a frequencia maxima
+		switch (muda_parametro)
+		{
+		case 0:
+			break;
+		case 1:
+			freq += inc_dec; // incrementa ou decrementa a frequencia
+			if (freq < 1)
+				freq = 1; // limita a frequencia minima
+			if (freq > 100)
+				freq = 100; // limita a frequencia maxima
+			break;
+		case 2:
+			if (amp == 255 && inc_dec == 1){
+				amp = 255;
+			}
+			else if (amp == 0 && inc_dec == -1){
+				amp = 0;
+			}
+			else {
+				amp += inc_dec; // incrementa ou decrementa a amplitude
+			}
+			break;
+		case 3:
+			offset += inc_dec; // incrementa ou decrementa o offset
+			break;
+		default:
+			break;
+		}
 
 		vTaskDelay(10);
 	}
@@ -92,99 +115,102 @@ static void vtask_mde(void *pvParameters)
 static void vtask_lcd(void *pvParameters)
 {
 	static char freq_string[4] = {0};
+	static char amp_string[4] = {0};
+	static char offset_string[4] = {0};
+	static uint8_t amp_local = 0;
+	static uint8_t offset_local = 0;
+
 	for (;;)
 	{
+		amp_local = amp / 5;
+		if (amp_local > 50)
+			amp_local = 50; // limita a amplitude maxima
+		
+		offset_local = offset / 5;
+		if (offset_local > 50)
+			offset_local = 50; // limita o offset maximo
+
+		cmd_LCD(0x8D, 0);
+		escreve_LCD("ON");
+
+		cmd_LCD(0xC0, 0);
+		ident_num(freq, freq_string, 3); // converte o contador para string
+		escreve_LCD(freq_string);
+
+		cmd_LCD(0xC3, 0); // desloca cursor para a segunda linha
+		escreve_LCD("Hz ");
+
+		cmd_LCD(0xC6, 0);
+		ident_num(amp_local, amp_string, 3); // converte o contador para
+		escreve_LCD(amp_string);
+
+		cmd_LCD(0xC9, 0);
+		escreve_LCD("V");
+
+		cmd_LCD(0xCB, 0);
+		ident_num(offset_local, offset_string, 3); // converte o contador para string
+		escreve_LCD(offset_string);
+
+		cmd_LCD(0xCE, 0);
+		escreve_LCD("V");
 		switch (estado_mde)
 		{
 		case ESTADO0:
 			cmd_LCD(0x80, 0);		 // desloca cursor para a primeira linha
-			escreve_LCD("T:QUA D:"); // string armazenada na RAM
-
+			escreve_LCD("T:QUA D:50"); // string armazenada na RAM
 			cmd_LCD(0x8A, 0);
 			escreve_LCD("%");
 
-			cmd_LCD(0x8D, 0);
-			escreve_LCD("ON");
-
-			cmd_LCD(0xC0, 0);
-			ident_num(freq, freq_string, 3); // converte o contador para string
-        	escreve_LCD(freq_string);
-
-			cmd_LCD(0xC3, 0); // desloca cursor para a segunda linha
-			escreve_LCD("Hz ");
-
-			cmd_LCD(0xC9, 0);
-			escreve_LCD("V");
-
-			cmd_LCD(0xCE, 0);
-			escreve_LCD("V");
 			break;
 		case ESTADO1:
 			cmd_LCD(0x80, 0);		 // desloca cursor para a primeira linha
-			escreve_LCD("T:TRI D:"); // string armazenada na RAM
-
+			escreve_LCD("T:TRI D:50"); // string armazenada na RAM
 			cmd_LCD(0x8A, 0);
 			escreve_LCD("%");
-
-			cmd_LCD(0x8D, 0);
-			escreve_LCD("ON");
-
-			cmd_LCD(0xC0, 0);
-			ident_num(freq, freq_string, 3); // converte o contador para string
-        	escreve_LCD(freq_string);
-
-			cmd_LCD(0xC3, 0); // desloca cursor para a segunda linha
-			escreve_LCD("Hz ");
-
-			cmd_LCD(0xC9, 0);
-			escreve_LCD("V");
-
-			cmd_LCD(0xCE, 0);
-			escreve_LCD("V");
 			break;
 		case ESTADO2:
 			cmd_LCD(0x80, 0);	   // desloca cursor para a primeira linha
-			escreve_LCD("T:RAM "); // string armazenada na RAM
-
-			cmd_LCD(0x8D, 0);
-			escreve_LCD("ON");
-
-			cmd_LCD(0xC0, 0);
-			ident_num(freq, freq_string, 3); // converte o contador para string
-        	escreve_LCD(freq_string);
-
-			cmd_LCD(0xC3, 0); // desloca cursor para a segunda linha
-			escreve_LCD("Hz ");
-
-			cmd_LCD(0xC9, 0);
-			escreve_LCD("V");
-
-			cmd_LCD(0xCE, 0);
-			escreve_LCD("V");
+			escreve_LCD("T:RAM      "); // string armazenada na RAM
 			break;
 		case ESTADO3:
 			cmd_LCD(0x80, 0);	   // desloca cursor para a primeira linha
-			escreve_LCD("T:SEN "); // string armazenada na RAM
+			escreve_LCD("T:SEN      "); // string armazenada na RAM
 
-			cmd_LCD(0x8D, 0);
-			escreve_LCD("ON");
-
-			cmd_LCD(0xC0, 0);
-			ident_num(freq, freq_string, 3); // converte o contador para string
-        	escreve_LCD(freq_string);
-
-			cmd_LCD(0xC3, 0); // desloca cursor para a segunda linha
-			escreve_LCD("Hz ");
-
-			cmd_LCD(0xC9, 0);
-			escreve_LCD("V");
-
-			cmd_LCD(0xCE, 0);
-			escreve_LCD("V");
 			break;
 		default:
 			break;
 		}
+
+		switch (muda_parametro)
+		{
+		case 0:
+			cmd_LCD(0xCF, 0);
+			escreve_LCD(" ");
+			cmd_LCD(0x8B, 0);
+			escreve_LCD("*");
+			break;
+		case 1:
+			cmd_LCD(0x8B, 0);
+			escreve_LCD(" ");
+			cmd_LCD(0xC5, 0);
+			escreve_LCD("*");
+			break;
+		case 2:
+			cmd_LCD(0xC5, 0);
+			escreve_LCD(" ");
+			cmd_LCD(0xCA, 0);
+			escreve_LCD("*");
+			break;
+		case 3:
+			cmd_LCD(0xCA, 0);
+			escreve_LCD(" ");
+			cmd_LCD(0xCF, 0);
+			escreve_LCD("*");
+			break;
+		default:
+			break;
+		}
+
 		vTaskDelay(20);
 	}
 }
@@ -213,7 +239,7 @@ ISR(PCINT1_vect)
 	else if ((PINC & 0x0F) == 0x0D)
 	{
 		// S1 pressionado (muda parametro)
-		muda_parametro += 1; // seta flag para mudar o parametro
+		muda_parametro++; // seta flag para mudar o parametro
 		if (muda_parametro > 3)
 		{
 			muda_parametro = 0; // reseta a flag
@@ -222,7 +248,6 @@ ISR(PCINT1_vect)
 	else
 	{
 		inc_dec = 0;		// limpa o incremento/decremento
-		muda_parametro = 0; // limpa a flag de mudar parametro
 	}
 }
 
@@ -231,16 +256,16 @@ ISR(TIMER1_COMPA_vect)
 	switch (estado_mde)
 	{
 	case ESTADO0:
-		quadrada(255, 0);
+		quadrada(amp, offset);
 		break;
 	case ESTADO1:
-		triangular(255, 0);
+		triangular(amp, offset);
 		break;
 	case ESTADO2:
-		rampa(255, 0);
+		rampa(amp, offset);
 		break;
 	case ESTADO3:
-		senoidal(255, 0, cont); // envia o sinal senoide
+		senoidal(amp, offset, cont); // envia o sinal senoide
 		break;
 	default:
 		break;
